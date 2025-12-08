@@ -1,102 +1,90 @@
-use super::constant::*;
+use binrw::{BinRead, BinWrite};
 
-use scroll::{ctx, Error, Pread, LE};
-use binread::{};
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct MagicHeader
-{
-    header1: [u8; 4],
-    header2: [u8; 7]
-}
+use crate::units::encode_tool::{utf16le_to_string, string_to_utf16le};
 
 
-impl MagicHeader {
-    pub fn validate(&self) -> Result<(), Error> {
-        if self.header1 != MAGIC {
-            return Err(Error::BadInput {
-                size: 4,
-                msg: "magic mismatch",
-            });
-        }
-        if self.header2 != HEADER {
-            return Err(Error::BadInput {
-                size: 7,
-                msg: "header suffix mismatch",
-            });
-        }
-        Ok(())
-    }
+pub const V230MAGIC: [u8; 32] = [
+    0x58, 0x50, 0x33, 0x0D, 0x0A, 0x20, 0x0A, 0x1A, 0x8B, 0x67, 0x01, 0x17, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+];
 
-    pub fn parser(data: &[u8]) -> Result<Self, Error> {
-        let hdr = Self::try_from(data)?;
-        hdr.validate()?;
-        Ok(hdr)
-    }
-}
 
-impl TryFrom<&[u8]> for MagicHeader {
-    type Error = Error;
-
-    fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
-        const EXPECTED_LEN: usize = 11;
-        if data.len() < EXPECTED_LEN {
-            return Err(Error::BadInput { size: data.len(), msg: "insufficient data for magic header" });
-        }
-
-        Ok(MagicHeader {
-            header1: data.pread(0)?,
-            header2: data.pread(4)?,
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(BinRead, BinWrite, Debug)]
+#[brw(little)]
 pub struct FileIndexHeader
 {
-    zlib_status: bool,
-    compress_length: u64,
-    index_length: u64
+    pub compression_flag: u8,
+    pub compression_size: u64,
+
+    #[br(if(compression_flag != 0x00))]
+    pub raw_size: Option<u64>,
 }
 
 
-impl FileIndexHeader {
-    pub fn parser(data: &[u8]) -> Result<Self, Error> {
-        let hdr = Self::try_from(data)?;
-        Ok(hdr)
-    }
-}
-
-
-impl TryFrom<&[u8]> for FileIndexHeader {
-    type Error = Error;
-
-    fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
-        const EXPECTED_LEN: usize = 17;
-        if data.len() < EXPECTED_LEN {
-            return Err(Error::BadInput {
-                size: data.len(),
-                msg: "insufficient data for file index header",
-            });
-        }
-
-        let zlib_status = data.pread::<u8>(0)? != 0;
-        let compress_length = data.pread_with(1, scroll::LE)?;
-        let index_length = data.pread_with(9, scroll::LE)?;
-
-        Ok(FileIndexHeader {
-            zlib_status,
-            compress_length,
-            index_length,
-        })
-    }
-}
-
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct IndexHeader
+#[derive(BinRead, BinWrite, Debug)]
+#[brw(little)]
+pub struct FileIndexEntry
 {
-    flag: [u8; 4],
-    index_length: u64,
+    pub file: FileIndexFile,
+    pub info: FileIndexInfo,
+    pub segment: FileIndexSegment,
+    pub adler32: FileIndexAdler32
+}
+
+
+#[derive(BinRead, BinWrite, Debug)]
+#[brw(little)]
+pub struct FileIndexFile
+{
+    #[brw(magic = b"File")]
+    pub entry_size: u64
+}
+
+#[derive(BinRead, BinWrite, Debug)]
+#[brw(little)]
+pub struct FileIndexInfo
+{
+    #[brw(magic = b"info")]
+    pub entry_size: u64,
+    pub flag: u32,
+    pub raw_size: u64,
+    pub compressed_size: u64,
+    pub name_length: u16,
+
+    #[br(map = |bytes: Vec<u16>| utf16le_to_string(&bytes))]
+    #[bw(map = |s: &String| string_to_utf16le(s.to_string()))]
+    #[br(count = name_length)]
+    pub name: String,
+}
+
+#[derive(BinRead, BinWrite, Debug)]
+#[brw(little)]
+pub struct FileIndexSegment
+{
+    #[brw(magic = b"segm")]
+    pub segment_size: u64,
+
+    #[br(count = segment_size/28)]
+    pub segment: Vec<FileIndexSegmentEntry>
+}
+
+
+#[derive(BinRead, BinWrite, Debug)]
+#[brw(little)]
+pub struct FileIndexSegmentEntry
+{
+    pub flag: u32,
+    pub offset: u64,
+    pub raw_size: u64,
+    pub compressed_size: u64
+}
+
+
+#[derive(BinRead, BinWrite, Debug)]
+#[brw(little)]
+pub struct FileIndexAdler32
+{
+    #[brw(magic = b"adlr\x04\0\0\0\0\0\0\0")]
+    pub adler32: u32,
 }
 
