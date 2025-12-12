@@ -89,6 +89,7 @@ impl XP3Parser
             }
         }
 
+        println!("{:?}", files);
 
         XP3Parser {
             file,
@@ -103,7 +104,7 @@ impl XP3Parser
         self.file_index.iter().map(|x| x.info.name.clone()).collect()
     }
 
-    pub fn get_file(&mut self, name: String) -> Vec<u8>
+    pub fn get_file(&mut self, name: &str) -> Vec<u8>
     {
         let offsets = self.file_index.iter()
             .filter_map(|x| {

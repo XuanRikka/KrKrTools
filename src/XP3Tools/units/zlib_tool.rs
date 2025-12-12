@@ -1,16 +1,17 @@
 use std::hash::Hasher;
-use std::io::{Write, Read, Seek};
+use std::io::{Write, Read, Seek, copy};
 
-use flate2::write::{ZlibEncoder, ZlibDecoder};
+use flate2::write::ZlibEncoder;
+use flate2::read::ZlibDecoder;
 use flate2::Compression;
 use adler::Adler32;
 
 
 pub fn decompress(input: &[u8]) -> Vec<u8> {
-    let output = Vec::new();
-    let mut decoder = ZlibDecoder::new(output);
-    decoder.write_all(input).expect("解压数据失败");
-    decoder.finish().expect("解压数据失败")
+    let mut decoder = ZlibDecoder::new(input);
+    let mut output = Vec::new();
+    decoder.read_to_end(&mut output).expect("解压数据失败");
+    output
 }
 
 
@@ -19,6 +20,7 @@ pub fn compress(input: &[u8]) -> Vec<u8> {
     encoder.write_all(input).expect("压缩数据失败");
     encoder.finish().expect("压缩数据失败")
 }
+
 
 pub fn compress_stream<R: Read, W: Write + Seek>(mut input: R, output: W) -> u32 {
     let mut encoder = ZlibEncoder::new(output, Compression::best());

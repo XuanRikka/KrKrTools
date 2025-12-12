@@ -21,10 +21,6 @@ path = "src/XP3Tools/xp3pack.rs"
 name = "xp3unpack"
 path = "src/XP3Tools/xp3Unpack.rs"
 
-[[bin]]
-name = "test"
-path = "src/XP3Tools/test.rs"
-
 [profile.release]
 opt-level = 3
 lto = "fat"

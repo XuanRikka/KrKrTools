@@ -52,8 +52,7 @@ fn main()
         let output_file = output.join(Path::new(&name));
         create_dir_all(output_file.parent().unwrap()).unwrap();
         let mut file = File::create(output_file.clone()).unwrap();
-        file.write_all(xp3.get_file(name.clone()).as_slice()).unwrap();
-        println!("解包 {} -> {}", name, output_file.display());
+        file.write_all(xp3.get_file(&name).as_slice()).unwrap();
     }
 
 }

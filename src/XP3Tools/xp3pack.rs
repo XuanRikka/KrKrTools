@@ -33,6 +33,7 @@ struct Cli {
 }
 
 
+#[derive(Debug)]
 struct FileInfo
 {
     path: PathBuf,
@@ -66,8 +67,6 @@ fn main()
         input_path_list.push(input.to_path_buf());
     }
 
-    let mut input_list: Vec<FileInfo> = Vec::new();
-
 
     let output: PathBuf;
     if args.output.is_none()
@@ -83,7 +82,7 @@ fn main()
     output_file.write_all(V230MAGIC.as_slice()).expect("写入失败");
 
     let index_offset = output_file.stream_position().unwrap();
-    println!("{:?}", index_offset);
+
     output_file.write_all(&[0u8; 8]).expect("写入失败");
 
 
@@ -156,6 +155,7 @@ fn main()
 
     let mut index_raw_size: u64 = 0;
     let mut index_compress_size: u64 = 0;
+    let mut index_data: Vec<u8> = Vec::new();
     for i in file_info_list.iter()
     {
         let mut data: Vec<u8> = Vec::new();
@@ -199,26 +199,22 @@ fn main()
         };
 
 
-        if(index_compress_flag == 1)
-        {
-            let mut file_data: Vec<u8> = Vec::new();
-            let mut file_data_cur = Cursor::new(&mut file_data);
-            file.write(&mut file_data_cur).expect("序列化目录数据失败");
-            file_data.extend(data);
-            let index_data = compress(&file_data);
-            output_file.write_all(index_data.as_slice()).expect("写入目录数据失败");
-            index_raw_size += file_data.len() as u64;
-            index_compress_size += index_data.len() as u64;
-        }
-        else
-        {
-            let mut header_data: Vec<u8> = Vec::new();
-            let mut file_data_cur = Cursor::new(&mut header_data);
-            file.write(&mut file_data_cur).expect("写入目录数据失败");
-            output_file.write_all(header_data.as_slice()).expect("写入目录数据失败");
-            output_file.write_all(data.as_slice()).expect("写入目录数据失败");
-            index_raw_size += (header_data.len() + data.len()) as u64;
-        }
+        let mut header_data: Vec<u8> = Vec::new();
+        let mut file_data_cur = Cursor::new(&mut header_data);
+        file.write(&mut file_data_cur).expect("写入目录数据失败");
+        index_data.write_all(header_data.as_slice()).expect("写入目录数据失败");
+        index_data.write_all(data.as_slice()).expect("写入目录数据失败");
+    }
+    index_raw_size =  index_data.len() as u64;
+    if index_compress_flag == 1
+    {
+        let compress_data = compress(index_data.as_slice());
+        index_compress_size = compress_data.len() as u64;
+        output_file.write_all(compress_data.as_slice()).expect("写入目录数据失败");
+    }
+    else
+    {
+        output_file.write_all(index_data.as_slice()).expect("写入目录数据失败");
     }
 
     let new_index_header: FileIndexHeader;
@@ -241,16 +237,13 @@ fn main()
         };
     }
 
-    println!("索引头部: {:?}", new_index_header);
     let mut a: Vec<u8> = Vec::new();
     let mut ac = Cursor::new(&mut a);
     output_file.seek(SeekFrom::Start(index_header_offset)).expect("输出文件写入失败");
     new_index_header.write(&mut ac).unwrap();
-    println!("{:?}", a);
     output_file.write_all(a.as_slice()).expect("输出文件写入失败");
 
     output_file.seek(SeekFrom::Start(index_offset)).expect("输出文件写入失败");
-    println!("{:?}", index_header_offset.to_le_bytes());
     output_file.write_all(index_header_offset.to_le_bytes().as_slice()).expect("输出文件写入失败");
 
 }
