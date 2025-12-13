@@ -133,6 +133,11 @@ jobs:
         Write-Host "Packets $output"
         Write-Host "${{ steps.meta.outputs.package_name }}-${{ matrix.target }}"
         Write-Host "Current working directory: $($PWD.Path)"
+
+    - name: debug
+      shell: bash
+      run: |
+        ls -l *.tar.gz *.zip || dir *.tar.gz *.zip
         
     - name: Upload artifact (Unix)
       if: ${{ !contains(matrix.target, 'windows') }}
