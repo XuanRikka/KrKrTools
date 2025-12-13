@@ -89,9 +89,13 @@ jobs:
     - name: Package binary
       shell: bash
       run: |
-        mapfile -t BINS < <(jq -r '.[]' <<< '${{ steps.meta.outputs.bin_names }}')
+        BINS=()
+        while IFS= read -r line || [[ -n "$line" ]]; do
+          [[ -n "$line" ]] && BINS+=("$line")
+        done < <(echo '${{ steps.meta.outputs.bin_names }}' | jq -r '.[]')
+        
         mkdir -p dist
-
+        
         for bin in "${BINS[@]}"; do
           if [[ "${{ matrix.target }}" == *"windows"* ]]; then
             cp "target/${{ matrix.target }}/release/${bin}.exe" "./dist/"
