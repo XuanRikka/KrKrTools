@@ -1,19 +1,25 @@
 use std::fs::File;
-use std::io::{Cursor, Read, Seek, SeekFrom};
-use std::process::exit;
+use std::io::{copy, Cursor, Read, Seek, SeekFrom, Write};
+use std::sync::Arc;
 use binrw::BinRead;
 
 use crate::units::models::*;
-use crate::units::zlib_tool::decompress;
+use crate::units::zlib_tool::{decompress, decompress_stream, decompress_stream_vec};
 
+
+fn file_range(mut file: Arc<File>, start: u64, len: u64) -> impl Read + Seek {
+    file.seek(SeekFrom::Start(start)).expect("读取数据失败");
+    file.take(len)
+}
 
 
 pub struct XP3Parser
 {
-    pub file: File,
+    pub file: Arc<File>,
     pub index_offset: u64,
     pub file_index_header: FileIndexHeader,
     pub file_index: Vec<FileIndexEntry>,
+    pub file_name_list: Vec<String>,
 }
 
 
@@ -69,10 +75,8 @@ impl XP3Parser
         }
         else
         {
-            let mut data: Vec<u8> = Vec::new();
-            file.read_to_end(&mut data).expect("读取文件失败");
-            let decode_data = decompress(data.as_slice());
-            drop(data);
+
+            let decode_data = decompress_stream_vec(&file);
             let mut data_cur = Cursor::new(decode_data);
             loop {
                 let current_pos = data_cur.stream_position().expect("文件读取失败");
@@ -89,55 +93,41 @@ impl XP3Parser
             }
         }
 
-        println!("{:?}", files);
-
+        let file_name_list = files.iter().map(|x| x.info.name.clone()).collect::<Vec<_>>();
+        
         XP3Parser {
-            file,
+            file: Arc::from(file),
             index_offset,
             file_index_header,
             file_index: files,
+            file_name_list,
         }
 
     }
-    pub fn get_file_name(self: &Self) -> Vec<String>
+    pub fn get_file_name(&self) -> Vec<String>
     {
-        self.file_index.iter().map(|x| x.info.name.clone()).collect()
+        self.file_name_list.clone()
     }
 
-    pub fn get_file(&mut self, name: &str) -> Vec<u8>
+    pub fn get_file<W: Write>(&mut self, name: &str, mut output: W)
     {
-        let offsets = self.file_index.iter()
-            .filter_map(|x| {
-                if x.info.name == name {
-                    Some(x.segment.segment.iter().clone())
-                } else {
-                    None
-                }
-            })
-            .next();
-        if !offsets.is_some()
-        {
-            return Vec::new();
+        let entry = match self.file_index.iter().find(|x| x.info.name == name) {
+            Some(entry) => entry,
+            None => return,
         };
 
-
-        let mut data: Vec<u8> = Vec::new();
-        for i in offsets.unwrap()
+        for i in &entry.segment.segment
         {
-            let mut temp_data: Vec<u8> = vec![0u8; i.compressed_size as usize];
-            self.file.seek(SeekFrom::Start(i.offset)).expect("读取文件失败");
-            self.file.read_exact(&mut *temp_data).expect("读取文件失败");
+            let mut range = file_range(self.file.clone(), i.offset, i.compressed_size);
             if i.flag == 1
             {
-                data.extend(decompress(temp_data.as_slice()));
+                decompress_stream(range, &mut output);
             }
             else
             {
-                data.extend(temp_data);
+                copy(&mut range, &mut output).expect("读取数据失败");
             };
         };
-
-        data
     }
 
 }

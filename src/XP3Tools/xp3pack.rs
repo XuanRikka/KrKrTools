@@ -121,12 +121,13 @@ fn main()
         }
         file_info_list.push(FileInfo{
             path: i.to_path_buf(),
-            name: name,
+            name: name.clone(),
             offest: offset,
             data_size: output_file.stream_position().unwrap() - offset,
             raw_size: i.metadata().unwrap().len(),
             adler32: alder32,
         });
+        println!("打包 {} -> {}", i.to_string_lossy(), name)
     }
 
     let index_compress_flag = if args.no_compress_index { 0 } else { 1 };
