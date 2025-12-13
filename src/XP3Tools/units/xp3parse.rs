@@ -4,7 +4,7 @@ use std::sync::Arc;
 use binrw::BinRead;
 
 use crate::units::models::*;
-use crate::units::zlib_tool::{decompress, decompress_stream, decompress_stream_vec};
+use crate::units::zlib_tool::{decompress_stream, decompress_stream_vec};
 
 
 fn file_range(mut file: Arc<File>, start: u64, len: u64) -> impl Read + Seek {

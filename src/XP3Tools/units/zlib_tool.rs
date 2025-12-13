@@ -1,6 +1,5 @@
 use std::hash::Hasher;
 use std::io::{Write, Read, Seek, copy};
-use std::process::Output;
 use flate2::write::ZlibEncoder;
 use flate2::read::ZlibDecoder;
 use flate2::Compression;
