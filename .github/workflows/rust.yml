@@ -128,7 +128,7 @@ jobs:
           }
         }
         
-        $output = "$pkgName-$target.zip"
+        $output = ".\$pkgName-$target.zip"
         Compress-Archive -Path "$distDir/*" -DestinationPath "$output" -Force
         Write-Host "Packets $output"
         Write-Host "${{ steps.meta.outputs.package_name }}-${{ matrix.target }}"
