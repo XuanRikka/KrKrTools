@@ -86,33 +86,48 @@ jobs:
           cargo build --verbose --release --target "$target"
         fi
 
-    - name: Package binary
+    - name: Package binary (Unix)
+      if: ${{ !contains(matrix.target, 'windows') }}
       shell: bash
       run: |
         BINS=()
         while IFS= read -r line || [[ -n "$line" ]]; do
           [[ -n "$line" ]] && BINS+=("$line")
         done < <(echo '${{ steps.meta.outputs.bin_names }}' | jq -r '.[]')
-        
+
         mkdir -p dist
-        
         for bin in "${BINS[@]}"; do
-          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
-            cp "target/${{ matrix.target }}/release/${bin}.exe" "./dist/"
-          else
-            cp "target/${{ matrix.target }}/release/${bin}" "./dist/"
-          fi
+          cp "target/${{ matrix.target }}/release/${bin}" "./dist/"
         done
 
         PKG_NAME="${{ steps.meta.outputs.package_name }}"
+        OUTPUT="${PKG_NAME}-${{ matrix.target }}.tar.gz"
+        tar -czf "$OUTPUT" -C dist .
 
-        if [[ "${{ matrix.target }}" == *"windows"* ]]; then
-          OUTPUT="${PKG_NAME}-${{ matrix.target }}.zip"
-          (cd dist && zip -r "../$OUTPUT" .)
-        else
-          OUTPUT="${PKG_NAME}-${{ matrix.target }}.tar.gz"
-          tar -czf "$OUTPUT" -C dist .
-        fi
+    - name: Package binary (Windows)
+      if: ${{ contains(matrix.target, 'windows') }}
+      shell: pwsh
+      run: |
+        $target = "${{ matrix.target }}"
+        $pkgName = "${{ steps.meta.outputs.package_name }}"
+        $distDir = "dist"
+
+        New-Item -ItemType Directory -Force -Path $distDir | Out-Null
+        $binNames = '${{ steps.meta.outputs.bin_names }}' | ConvertFrom-Json
+        foreach ($bin in $binNames) {
+          if ($bin) {
+            $src = "target/$target/release/$bin.exe"
+            if (Test-Path $src) {
+              Copy-Item $src -Destination "$distDir/"
+            } else {
+              Write-Error "❌ Binary not found: $src"
+              exit 1
+            }
+          }
+        }
+        
+        $output = "$pkgName-$target.zip"
+        Compress-Archive -Path "$distDir/*" -DestinationPath "$output" -Force
 
     - name: Upload to Release
       uses: softprops/action-gh-release@v2
