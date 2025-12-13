@@ -58,20 +58,23 @@ jobs:
     - name: Install target
       run: rustup target add ${{ matrix.target }}
 
-    - name: Install 32-bit cross-compilation dependencies (for i686)
-      if: matrix.target == 'i686-unknown-linux-gnu'
-      run: |
-        sudo dpkg --add-architecture i386
-        sudo apt-get update
-        sudo apt-get install -y \
-          gcc-multilib \
-          g++-multilib \
-          libc6-dev-i386 \
-          lib32stdc++6 \
-          lib32gcc-s1
+    - name: Install Cross
+      run: cargo install cross --git https://github.com/cross-rs/cross --locked
+
+    - name: Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
     
     - name: Build
-      run: cargo build --verbose --release --target ${{ matrix.target }}
+      run: |
+        if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+          cargo build --verbose --release --target ${{ matrix.target }}
+        else
+          cross build --verbose --release --target ${{ matrix.target }}
 
     - name: Package binary
       shell: bash
