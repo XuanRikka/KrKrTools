@@ -19,7 +19,7 @@ path = "src/XP3Tools/xp3pack.rs"
 
 [[bin]]
 name = "xp3unpack"
-path = "src/XP3Tools/xp3Unpack.rs"
+path = "src/XP3Tools/xp3unpack.rs"
 
 [profile.release]
 opt-level = 3
@@ -31,5 +31,5 @@ overflow-checks = false
 adler = "1.0.2"
 binrw = "0.15.0"
 clap = { version = "4.5.48", features = ["derive"] }
-flate2 = { version = "1.1.2", features = ["zlib"] }
+flate2 = { version = "1.1.2", features = ["zlib-ng"] }
 walkdir = "2.5.0"
