@@ -1,0 +1,96 @@
+name: Rust Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: i686-unknown-linux-gnu
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: windows-latest
+            target: i686-pc-windows-msvc
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - uses: Swatinem/rust-cache@v2
+
+    - name: Extract package and bin names
+      id: meta
+      shell: bash
+      run: |
+        PKG_NAME=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].name')
+        if [[ -z "$PKG_NAME" || "$PKG_NAME" == "null" ]]; then
+          echo "Error: failed to extract package.name from Cargo.toml" >&2
+          exit 1
+        fi
+        echo "package_name=$PKG_NAME" >> "$GITHUB_OUTPUT"
+
+        names=$(cargo metadata --no-deps --format-version 1 | \
+          jq -r '.packages[0].targets[] | select(.kind | index("bin")) | select(.src_path | test("Cargo.toml$")) | .name')
+        if [[ -z "$names" ]]; then
+          echo "bin_names=[]" >> "$GITHUB_OUTPUT"
+        else
+          printf 'bin_names=%s\n' "$(jq -n --arg names "$names" '$names | split("\n") | map(select(. != ""))')" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Install target
+      run: rustup target add ${{ matrix.target }}
+    
+    - name: Build
+      run: cargo build --verbose --release --target ${{ matrix.target }}
+
+    - name: Package binary
+      shell: bash
+      run: |
+        mapfile -t BINS < <(jq -r '.[]' <<< '${{ steps.bins.outputs.bin_names }}')
+        mkdir -p dist
+
+        for bin in "${BINS[@]}"; do
+          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+            cp "target/${{ matrix.target }}/release/${bin}.exe" "./dist/"
+          else
+            cp "target/${{ matrix.target }}/release/${bin}" "./dist/"
+          fi
+        done
+
+        PKG_NAME="${{ steps.meta.outputs.package_name }}"
+
+        if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+          OUTPUT="${PKG_NAME}-${{ matrix.target }}.zip"
+          (cd dist && zip -r "../$OUTPUT" .)
+        else
+          OUTPUT="${PKG_NAME}-${{ matrix.target }}.tar.gz"
+          tar -czf "$OUTPUT" -C dist .
+        fi
+
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: |
+          *.zip
+          *.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
