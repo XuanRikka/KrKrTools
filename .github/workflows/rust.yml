@@ -137,7 +137,7 @@ jobs:
     - name: debug
       shell: bash
       run: |
-        ls -l *.tar.gz *.zip || dir *.tar.gz *.zip
+        ls
         
     - name: Upload artifact (Unix)
       if: ${{ !contains(matrix.target, 'windows') }}
