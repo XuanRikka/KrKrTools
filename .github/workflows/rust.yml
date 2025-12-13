@@ -78,7 +78,7 @@ jobs:
     
     - name: Build
       run: |
-        if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+        if [[ "${{ matrix.target }}" == *"windows"* ]] || [[ "${{ matrix.target }}" == *"apple-darwin"* ]]; then
           cargo build --verbose --release --target ${{ matrix.target }}
         else
           cross build --verbose --release --target ${{ matrix.target }}
