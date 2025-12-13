@@ -57,6 +57,18 @@ jobs:
 
     - name: Install target
       run: rustup target add ${{ matrix.target }}
+
+    - name: Install 32-bit cross-compilation dependencies (for i686)
+      if: matrix.target == 'i686-unknown-linux-gnu'
+      run: |
+        sudo dpkg --add-architecture i386
+        sudo apt-get update
+        sudo apt-get install -y \
+          gcc-multilib \
+          g++-multilib \
+          libc6-dev-i386 \
+          lib32stdc++6 \
+          lib32gcc-s1
     
     - name: Build
       run: cargo build --verbose --release --target ${{ matrix.target }}
