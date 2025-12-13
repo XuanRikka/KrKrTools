@@ -137,7 +137,7 @@ jobs:
     - name: debug
       shell: bash
       run: |
-        ls
+        find . -maxdepth 2 -type f -o -type d
         
     - name: Upload artifact (Unix)
       if: ${{ !contains(matrix.target, 'windows') }}
