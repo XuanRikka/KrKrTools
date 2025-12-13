@@ -119,6 +119,7 @@ jobs:
         foreach ($bin in $binNames) {
           if ($bin) {
             $src = "target/$target/release/$bin.exe"
+            Write-Host "$src $distDir"
             if (Test-Path $src) {
               Copy-Item $src -Destination "$distDir/"
             } else {
