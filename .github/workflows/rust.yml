@@ -129,19 +129,19 @@ jobs:
         $output = "$pkgName-$target.zip"
         Compress-Archive -Path "$distDir/*" -DestinationPath "$output" -Force
         
-        - name: Upload artifact (Unix)
-          if: ${{ !contains(matrix.target, 'windows') }}
-          uses: actions/upload-artifact@v4
-          with:
-            name: ${{ steps.meta.outputs.package_name }}-${{ matrix.target }}
-            path: ${{ steps.meta.outputs.package_name }}-${{ matrix.target }}.tar.gz
+    - name: Upload artifact (Unix)
+      if: ${{ !contains(matrix.target, 'windows') }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.meta.outputs.package_name }}-${{ matrix.target }}
+        path: ${{ steps.meta.outputs.package_name }}-${{ matrix.target }}.tar.gz
   
-        - name: Upload artifact (Windows)
-          if: ${{ contains(matrix.target, 'windows') }}
-          uses: actions/upload-artifact@v4
-          with:
-            name: ${{ steps.meta.outputs.package_name }}-${{ matrix.target }}
-            path: ${{ steps.meta.outputs.package_name }}-${{ matrix.target }}.zip
+    - name: Upload artifact (Windows)
+      if: ${{ contains(matrix.target, 'windows') }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.meta.outputs.package_name }}-${{ matrix.target }}
+        path: ${{ steps.meta.outputs.package_name }}-${{ matrix.target }}.zip
 
   upload-release:
     needs: build
