@@ -73,6 +73,7 @@ jobs:
         echo "🛠️  Binaries: $bin_names_json"
 
     - name: Install target
+      if: ${{ !contains(matrix.target, 'musl') }}
       run: rustup target add ${{ matrix.target }}
 
     - name: Install Cross
