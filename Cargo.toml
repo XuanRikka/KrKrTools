@@ -26,6 +26,7 @@ opt-level = 3
 lto = "fat"
 strip = true
 overflow-checks = false
+panic = "abort"
 
 [dependencies]
 adler = "1.0.2"
