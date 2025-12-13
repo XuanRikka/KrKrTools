@@ -75,6 +75,7 @@ jobs:
           cargo build --verbose --release --target ${{ matrix.target }}
         else
           cross build --verbose --release --target ${{ matrix.target }}
+        fi
 
     - name: Package binary
       shell: bash
