@@ -115,7 +115,7 @@ jobs:
         $distDir = "dist"
 
         New-Item -ItemType Directory -Force -Path $distDir | Out-Null
-        $binNames = '${{ steps.meta.outputs.bin_names }}' | ConvertFrom-Json
+        $binNames = '${{ steps.meta.outputs.bin_name }}' | ConvertFrom-Json
         foreach ($bin in $binNames) {
           if ($bin) {
             $src = "target/$target/release/$bin.exe"
