@@ -78,16 +78,16 @@ jobs:
     
     - name: Build
       run: |
-        if [[ "${{ matrix.target }}" == *"windows"* ]] || [[ "${{ matrix.target }}" == *"apple-darwin"* ]]; then
-          cargo build --verbose --release --target ${{ matrix.target }}
-        else
+        if [[ "${{ matrix.target }}" == *"i686"* ]]; then
           cross build --verbose --release --target ${{ matrix.target }}
+        else
+          cargo build --verbose --release --target ${{ matrix.target }}
         fi
 
     - name: Package binary
       shell: bash
       run: |
-        mapfile -t BINS < <(jq -r '.[]' <<< '${{ steps.bins.outputs.bin_names }}')
+        mapfile -t BINS < <(jq -r '.[]' <<< '${{ steps.meta.outputs.bin_names }}')
         mkdir -p dist
 
         for bin in "${BINS[@]}"; do
