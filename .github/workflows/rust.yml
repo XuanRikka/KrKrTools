@@ -103,6 +103,8 @@ jobs:
         PKG_NAME="${{ steps.meta.outputs.package_name }}"
         OUTPUT="${PKG_NAME}-${{ matrix.target }}.tar.gz"
         tar -czf "$OUTPUT" -C dist .
+        printf 'Packets %s\n' "$OUTPUT"
+        printf "${{ steps.meta.outputs.package_name }}-${{ matrix.target }}"
 
     - name: Package binary (Windows)
       if: ${{ contains(matrix.target, 'windows') }}
@@ -128,6 +130,8 @@ jobs:
         
         $output = "$pkgName-$target.zip"
         Compress-Archive -Path "$distDir/*" -DestinationPath "$output" -Force
+        Write-Host "Packets $output"
+        Write-Host "${{ steps.meta.outputs.package_name }}-${{ matrix.target }}"
         
     - name: Upload artifact (Unix)
       if: ${{ !contains(matrix.target, 'windows') }}
