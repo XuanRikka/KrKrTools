@@ -47,20 +47,24 @@ jobs:
       id: meta
       shell: bash
       run: |
-        PKG_NAME=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].name')
-        if [[ -z "$PKG_NAME" || "$PKG_NAME" == "null" ]]; then
-          echo "Error: failed to extract package.name from Cargo.toml" >&2
+        PKG_NAME=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].name // empty')
+        if [[ -z "$PKG_NAME" ]]; then
+          echo "Error: package name not found" >&2
           exit 1
         fi
         echo "package_name=$PKG_NAME" >> "$GITHUB_OUTPUT"
-
-        names=$(cargo metadata --no-deps --format-version 1 | \
-          jq -r '.packages[0].targets[] | select(.kind | index("bin")) | select(.src_path | test("Cargo.toml$")) | .name')
-        if [[ -z "$names" ]]; then
-          echo "bin_names=[]" >> "$GITHUB_OUTPUT"
-        else
-          printf 'bin_names=%s\n' "$(jq -n --arg names "$names" '$names | split("\n") | map(select(. != ""))')" >> "$GITHUB_OUTPUT"
-        fi
+    
+        # 2. 使用 `cargo read-manifest`：它只反映 Cargo.toml 中显式声明的 targets！
+        #    输出格式同 metadata 的 package.targets
+        bin_names_json=$(cargo read-manifest | \
+          jq -c '[.targets[] | select(.kind | index("bin")) | .name]')
+    
+        # 输出到 GitHub Output（确保是合法 JSON 字符串）
+        echo "bin_names=$bin_names_json" >> "$GITHUB_OUTPUT"
+    
+        # 可选：调试输出
+        echo "📦 Package: $PKG_NAME"
+        echo "🛠️  Binaries: $bin_names_json"
 
     - name: Install target
       run: rustup target add ${{ matrix.target }}
@@ -115,7 +119,7 @@ jobs:
         $distDir = "dist"
 
         New-Item -ItemType Directory -Force -Path $distDir | Out-Null
-        $binNames = '${{ steps.meta.outputs.bin_name }}' | ConvertFrom-Json
+        $binNames = '${{ steps.meta.outputs.bin_names }}' | ConvertFrom-Json
         foreach ($bin in $binNames) {
           if ($bin) {
             $src = "target/$target/release/$bin.exe"
