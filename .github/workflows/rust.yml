@@ -128,13 +128,36 @@ jobs:
         
         $output = "$pkgName-$target.zip"
         Compress-Archive -Path "$distDir/*" -DestinationPath "$output" -Force
+        
+        - name: Upload artifact (Unix)
+          if: ${{ !contains(matrix.target, 'windows') }}
+          uses: actions/upload-artifact@v4
+          with:
+            name: ${{ steps.meta.outputs.package_name }}-${{ matrix.target }}
+            path: ${{ steps.meta.outputs.package_name }}-${{ matrix.target }}.tar.gz
+  
+        - name: Upload artifact (Windows)
+          if: ${{ contains(matrix.target, 'windows') }}
+          uses: actions/upload-artifact@v4
+          with:
+            name: ${{ steps.meta.outputs.package_name }}-${{ matrix.target }}
+            path: ${{ steps.meta.outputs.package_name }}-${{ matrix.target }}.zip
 
-    - name: Upload to Release
-      uses: softprops/action-gh-release@v2
-      if: startsWith(github.ref, 'refs/tags/')
-      with:
-        files: |
-          *.zip
-          *.tar.gz
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  upload-release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/*/*.tar.gz
+            artifacts/*/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
