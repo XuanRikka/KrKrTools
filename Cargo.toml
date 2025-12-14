@@ -6,11 +6,11 @@ authors = ["XuanRikka <xuanrikka@qq.com>"]
 license = "MIT"
 
 [[bin]]
-name = "krkrdescrambler"
+name = "krkr-descrambler"
 path = "src/KrKrDescrambler-rs/krkr_descrambler.rs"
 
 [[bin]]
-name = "krkrscrambler"
+name = "krkr-scrambler"
 path = "src/KrKrDescrambler-rs/krkr_scrambler.rs"
 
 [[bin]]
@@ -20,6 +20,14 @@ path = "src/XP3Tools/xp3pack.rs"
 [[bin]]
 name = "xp3unpack"
 path = "src/XP3Tools/xp3unpack.rs"
+
+[[bin]]
+name = "scn-build"
+path = "src/ScnTools/scn_build.rs"
+
+[[bin]]
+name = "scn-decompile"
+path = "src/ScnTools/scn_decompile.rs"
 
 [profile.release]
 opt-level = 3
