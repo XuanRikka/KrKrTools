@@ -13,21 +13,27 @@ use binrw::BinWrite;
 use clap::Parser;
 use clap;
 
+
+// 用于打包XP3文件的工具
 #[derive(Parser)]
-#[command(name = "XP3Pack")]
-#[command(about = "用于打包xp3", version = "1.0")]
+#[command(version,about,long_about = None)]
 struct Cli {
+    // 输入文件或者目录
     input: String,
 
+    // 输出的xp3文件名称（可选）
     #[arg(short, long)]
     output: Option<String>,
 
+    // 添加该选项时不压缩被打包的文件内容
     #[arg(long, default_value_t = false, action = clap::ArgAction::SetTrue)]
     no_compress_file: bool,
 
+    // 添加该选项时不压缩目录索引
     #[arg(long, default_value_t = false, action = clap::ArgAction::SetTrue)]
     no_compress_index: bool,
 
+    // 添加该选项时不保持目录结构
     #[arg(long, default_value_t = false, action = clap::ArgAction::SetTrue)]
     no_dirs: bool
 }
