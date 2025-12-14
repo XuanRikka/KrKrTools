@@ -9,15 +9,15 @@ use std::path::Path;
 use clap::Parser;
 
 
-// 用于解包未经加密的XP3文件的工具
+/// 用于解包未经加密的XP3文件的工具
 #[derive(Parser)]
 #[command(version,about,long_about = None)]
 struct Cli
 {
-    // XP3文件的路径
+    /// XP3文件的路径
     input: String,
 
-    // 自定义输出的路径（可选）
+    /// 自定义输出的路径（可选）
     #[arg(short, long)]
     output: Option<String>,
 }

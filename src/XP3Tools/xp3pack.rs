@@ -14,26 +14,28 @@ use clap::Parser;
 use clap;
 
 
-// 用于打包XP3文件的工具
+/// 用于打包XP3文件的工具
+///
+/// 默认行为为压缩文件内容及其目录，并且保持目录结构
 #[derive(Parser)]
 #[command(version,about,long_about = None)]
 struct Cli {
-    // 输入文件或者目录
+    /// 输入文件或者目录
     input: String,
 
-    // 输出的xp3文件名称（可选）
+    /// 输出的xp3文件名称（可选）
     #[arg(short, long)]
     output: Option<String>,
 
-    // 添加该选项时不压缩被打包的文件内容
+    /// 添加该选项时不压缩被打包的文件内容
     #[arg(long, default_value_t = false, action = clap::ArgAction::SetTrue)]
     no_compress_file: bool,
 
-    // 添加该选项时不压缩目录索引
+    /// 添加该选项时不压缩目录索引
     #[arg(long, default_value_t = false, action = clap::ArgAction::SetTrue)]
     no_compress_index: bool,
 
-    // 添加该选项时不保持目录结构
+    /// 添加该选项时不保持目录结构
     #[arg(long, default_value_t = false, action = clap::ArgAction::SetTrue)]
     no_dirs: bool
 }
