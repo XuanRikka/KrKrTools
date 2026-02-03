@@ -83,11 +83,11 @@ fn main()
     let output: PathBuf;
     if args.output.is_none()
     {
-        output = PathBuf::from(format!("{}.xp3",input.file_stem().unwrap().to_string_lossy()));
+        output = PathBuf::from(format!("{}",input.file_stem().unwrap().to_string_lossy()));
     }
     else
     {
-        output = PathBuf::from(format!("{}.xp3",args.output.unwrap()));
+        output = PathBuf::from(format!("{}",args.output.unwrap()));
     }
 
     let mut output_file = File::create(output).expect("打开文件失败");
