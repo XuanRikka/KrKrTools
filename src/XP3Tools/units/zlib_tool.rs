@@ -1,9 +1,12 @@
 use std::hash::Hasher;
 use std::io::{Write, Read, Seek, copy};
+use std::num::{NonZero, NonZeroU64};
 use flate2::write::ZlibEncoder;
 use flate2::read::ZlibDecoder;
 use flate2::Compression;
 use adler::Adler32;
+use zopfli::ZlibEncoder as ZopfliEncoder;
+use zopfli::{BlockType, Options};
 
 
 pub fn decompress(input: &[u8]) -> Vec<u8> {
@@ -55,5 +58,35 @@ pub fn compress_stream<R: Read, W: Write + Seek>(mut input: R, output: W) -> u32
     }
 
     encoder.finish().expect("压缩失败");
+    adler32.finish() as u32
+}
+
+
+pub fn compress_stream_zopfli<R: Read, W: Write + Seek>(mut input: R, output: W) -> u32 {
+    let mut encoder = ZopfliEncoder::new_buffered(
+        Options {
+            iteration_count: NonZero::new(5).expect("REASON"),
+            iterations_without_improvement: NonZeroU64::try_from(u64::MAX).unwrap(),
+            maximum_block_splits: 15,
+        },
+        BlockType::Dynamic,
+        output
+    ).expect("创建zopfli编码器失败");
+    let mut buffer = [0u8; 32768];
+
+    let mut adler32 = Adler32::new();
+
+    loop {
+        match input.read(&mut buffer) {
+            Ok(0) => break, // EOF
+            Ok(n) => {
+                encoder.write_all(&buffer[..n]).expect("压缩失败");
+                adler32.write(&buffer[..n])
+            },
+            Err(e) => panic!("读取输入时出错: {}", e),
+        }
+    }
+
+    encoder.flush().expect("压缩失败");
     adler32.finish() as u32
 }

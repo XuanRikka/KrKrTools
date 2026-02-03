@@ -12,7 +12,7 @@ use adler::Adler32;
 use binrw::BinWrite;
 use clap::Parser;
 use clap;
-
+use crate::units::zlib_tool::compress_stream_zopfli;
 
 /// 用于打包XP3文件的工具
 ///
@@ -26,6 +26,10 @@ struct Cli {
     /// 输出的xp3文件名称（可选）
     #[arg(short, long)]
     output: Option<String>,
+
+    /// 使用zopfli算法来压缩，能提高压缩率，但是会极大增加压缩时间
+    #[arg(long, default_value_t = false, action = clap::ArgAction::SetTrue)]
+    zopfli: bool,
 
     /// 添加该选项时不压缩被打包的文件内容
     #[arg(long, default_value_t = false, action = clap::ArgAction::SetTrue)]
@@ -123,9 +127,13 @@ fn main()
             }
             alder32 = alder.finish() as u32;
         }
-        else
+        else if !args.no_compress_file&&!args.zopfli
         {
             alder32 = compress_stream(input_file, &mut output_file);
+        }
+        else
+        {
+            alder32 = compress_stream_zopfli(&mut input_file, &mut output_file);
         }
         file_info_list.push(FileInfo{
             path: i.to_path_buf(),
