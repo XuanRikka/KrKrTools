@@ -1,18 +1,18 @@
 mod units;
 use units::path_tool::*;
 use units::models::*;
-use units::zlib_tool::{compress_stream, compress};
+use units::zlib_tool::{compress_stream, compress, compress_stream_zopfli, compress_zopfli};
 
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 use std::fs::{File};
 use std::hash::Hasher;
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
+use std::env;
 
 use adler::Adler32;
 use binrw::BinWrite;
 use clap::Parser;
 use clap;
-use crate::units::zlib_tool::compress_stream_zopfli;
 
 /// 用于打包XP3文件的工具
 ///
@@ -21,11 +21,15 @@ use crate::units::zlib_tool::compress_stream_zopfli;
 #[command(version,about,long_about = None)]
 struct Cli {
     /// 输入文件或者目录
-    input: String,
+    input: Vec<PathBuf>,
 
     /// 输出的xp3文件名称（可选）
     #[arg(short, long)]
-    output: Option<String>,
+    output: Option<PathBuf>,
+
+    /// 打包时的基准路径，即生成的xp3文件内的索引数据内的路径的基准路径，默认为程序执行路径
+    #[arg(short, long)]
+    base: Option<PathBuf>,
 
     /// 使用zopfli算法来压缩，能提高压缩率，但是会极大增加压缩时间
     #[arg(long, default_value_t = false, action = clap::ArgAction::SetTrue)]
@@ -61,34 +65,55 @@ fn main()
 {
     let args = Cli::parse();
 
-    let input = Path::new(&args.input);
-
-    if !input.exists()
+    let cwd = get_cwd();
+    let base;
+    if args.base.is_none()
     {
-        panic!("{}不存在", args.input);
+        base = get_cwd();
+    }
+    else
+    {
+        base = args.base.unwrap();
+        env::set_current_dir(&base).expect("设置工作目录失败");
+    }
+
+    let mut inputs: Vec<PathBuf> = Vec::new();
+    for path_str in args.input {
+        if !path_str.exists() {
+            panic!("{} 不存在", path_str.display());
+        }
+        inputs.push(absolute_to_relative(&base, &path_str));
     }
 
     let mut input_path_list: Vec<PathBuf> = Vec::new();
 
-    if input.is_dir()
+    for input in inputs.iter()
     {
-        input_path_list = get_all_files_walkdir(input)
-    }
-    if input.is_file()
-    {
-        input_path_list.push(input.to_path_buf());
+        if input.is_dir()
+        {
+            input_path_list.extend(get_all_files_walkdir(input))
+        }
+        if input.is_file()
+        {
+            input_path_list.push(input.to_path_buf());
+        }
     }
 
 
-    let output: PathBuf;
+    let mut output: PathBuf;
     if args.output.is_none()
     {
-        output = PathBuf::from(format!("{}",input.file_stem().unwrap().to_string_lossy()));
+        output = cwd.join(PathBuf::from("output.xp3"));
     }
     else
     {
-        output = PathBuf::from(format!("{}",args.output.unwrap()));
+        output = args.output.unwrap();
+        if output.is_relative()
+        {
+            output = cwd.join(output);
+        }
     }
+    println!("输出文件：{}", output.display());
 
     let mut output_file = File::create(output).expect("打开文件失败");
     output_file.write_all(V230MAGIC.as_slice()).expect("写入失败");
@@ -223,9 +248,15 @@ fn main()
         index_data.write_all(data.as_slice()).expect("写入目录数据失败");
     }
     index_raw_size =  index_data.len() as u64;
-    if index_compress_flag == 1
+    if index_compress_flag == 1&&!args.zopfli
     {
         let compress_data = compress(index_data.as_slice());
+        index_compress_size = compress_data.len() as u64;
+        output_file.write_all(compress_data.as_slice()).expect("写入目录数据失败");
+    }
+    else if index_compress_flag == 1&&args.zopfli
+    {
+        let compress_data = compress_zopfli(index_data.as_slice());
         index_compress_size = compress_data.len() as u64;
         output_file.write_all(compress_data.as_slice()).expect("写入目录数据失败");
     }

@@ -21,13 +21,13 @@ path = "src/XP3Tools/xp3pack.rs"
 name = "xp3unpack"
 path = "src/XP3Tools/xp3unpack.rs"
 
-[[bin]]
-name = "scn-build"
-path = "src/ScnTools/scn_build.rs"
-
-[[bin]]
-name = "scn-decompile"
-path = "src/ScnTools/scn_decompile.rs"
+#[[bin]]
+#name = "scn-build"
+#path = "src/ScnTools/scn_build.rs"
+#
+#[[bin]]
+#name = "scn-decompile"
+#path = "src/ScnTools/scn_decompile.rs"
 
 [profile.release]
 opt-level = 3

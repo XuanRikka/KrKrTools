@@ -1,12 +1,12 @@
 use std::hash::Hasher;
-use std::io::{Write, Read, Seek, copy};
+use std::io::{Write, Read, Seek, copy, BufWriter, Cursor};
 use std::num::{NonZero, NonZeroU64};
 use flate2::write::ZlibEncoder;
 use flate2::read::ZlibDecoder;
 use flate2::Compression;
 use adler::Adler32;
-use zopfli::ZlibEncoder as ZopfliEncoder;
-use zopfli::{BlockType, Options};
+use zopfli::{Format, ZlibEncoder as ZopfliEncoder};
+use zopfli::{BlockType, Options, compress as zopfli_compress};
 
 
 pub fn decompress(input: &[u8]) -> Vec<u8> {
@@ -21,6 +21,23 @@ pub fn compress(input: &[u8]) -> Vec<u8> {
     let mut encoder = ZlibEncoder::new(Vec::new(), Compression::best());
     encoder.write_all(input).expect("压缩数据失败");
     encoder.finish().expect("压缩数据失败")
+}
+
+
+pub fn compress_zopfli(input: &[u8]) -> Vec<u8> {
+    let mut w = Vec::new();
+    let mut r = Cursor::new(input);
+    zopfli_compress(
+        Options {
+            iteration_count: NonZero::new(5).expect("REASON"),
+            iterations_without_improvement: NonZeroU64::try_from(u64::MAX).unwrap(),
+            maximum_block_splits: 15,
+        },
+        Format::Zlib,
+        input,
+        &mut w
+    ).unwrap();
+    w.to_vec()
 }
 
 
